@@ -1,12 +1,10 @@
 from turtle import *
-import time
 
 scale = 5
 
 space = Screen()
-space.setup(width=600, height=600, startx=None, starty=None)
 space.colormode(255)
-space.bgcolor(0,255,255)
+space.bgcolor(255,255,255)
 
 bezos = Turtle()
 bezos.hideturtle()
@@ -16,54 +14,61 @@ def render(renderer, entities):
     renderer.clear()
     renderer.setundobuffer(None)
     renderer.pensize(scale)
-    for i in entities:
-        renderer.penup()
-        pos = (i[0] * scale,i[1] * scale)
-        renderer.setposition(pos)
-        renderer.pendown()
-        renderer.setposition(pos)
+    for i in entities.keys():
+        if entities[i][0] == 1:
+            pos = (i[0]*scale,i[1]*scale)
+            renderer.penup()
+            renderer.setposition(pos)
+            renderer.pendown()
+            renderer.setposition(pos)
+
+import random
 
 testArea = ((-1,-1),(-1,0),(0,-1),(-1,1),(1,-1),(0,1),(1,0),(1,1))
 
-sphereOfInfluence = []
-for i in testArea:
-    sphereOfInfluence.append((-i[0],-i[1]))
-sphereOfInfluence = tuple(sphereOfInfluence)
+cells = set()
+for i in range(512):
+    cells.add((random.randint(-20,20),random.randint(-20,20)))
+newCells = list(cells)
 
-activeCells = [(0,1),(1,1),(-1,0),(0,0),(0,-1)]
+deadCells = []
 
-renderPositions = set(activeCells)
+positions = {}
+for i in newCells:
+    positions[i] = [1,0]
 
-for frame in range(500):
+for frame in range(1000):
 
-    Time = time.time()
+    render(bezos,positions)
 
-    render(bezos,renderPositions)
+    for newCell in newCells:
+        for displacement in testArea:
+            cell = (newCell[0]+displacement[0],newCell[1]+displacement[1])
+            if cell in positions:
+                positions[cell][1] += 1
+            else:
+                positions[cell] = [-2,1]
 
-    affectedCells = set()
-    for cell in activeCells:
-        for displacement in sphereOfInfluence:
-            affectedCells.add((cell[0] + displacement[0],cell[1] + displacement[1]))
+    for deadCell in deadCells:
+        for displacement in testArea:
+            cell = (deadCell[0]+displacement[0],deadCell[1]+displacement[1])
+            if positions[cell][1] == 1 and positions[cell][0] == -2:
+                del positions[cell]
+                continue
+            positions[cell][1] -= 1
+        if positions[deadCell][1] == 0:
+            del positions[deadCell]
+            continue
+        positions[deadCell][0] = -2
 
     newCells = []
     deadCells = []
 
-    for cell in affectedCells:
-        neighbors = 0
-        for displacement in testArea:
-            if (cell[0] + displacement[0],cell[1] + displacement[1]) in renderPositions:
-                neighbors += 1
-        if cell in renderPositions:
-            if neighbors > 3 or neighbors < 2:
-                deadCells.append(cell)
-        if neighbors == 3:
-                newCells.append(cell)
-
-    for deadCell in deadCells:
-        renderPositions.remove(deadCell)
-    for newCell in newCells:
-        renderPositions.add(newCell)
-
-    activeCells = newCells + deadCells
-
-    time.sleep(max(0,0.1 + Time - time.time()))
+    for position in positions.keys():
+        if positions[position][0] == 1:
+            if positions[position][1] > 3 or positions[position][1] < 2:
+                positions[position][0] = -1
+                deadCells.append(position)
+        elif positions[position][1] == 3:
+            positions[position][0] = 1
+            newCells.append(position)
