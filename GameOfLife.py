@@ -1,34 +1,72 @@
+import random
 from turtle import *
-
-scale = 5
 
 space = Screen()
 space.colormode(255)
-space.bgcolor(255,255,255)
+space.bgcolor(0,0,0)
 
 bezos = Turtle()
 bezos.hideturtle()
+bezos.pencolor((255,255,255))
+
+scale = 5
+
+bezos.pensize(scale)
 
 def render(renderer, entities):
     renderer._tracer(1000000,0)
     renderer.clear()
     renderer.setundobuffer(None)
-    renderer.pensize(scale)
-    for i in entities.keys():
-        if entities[i][0] == 1:
-            pos = (i[0]*scale,i[1]*scale)
-            renderer.penup()
-            renderer.setposition(pos)
-            renderer.pendown()
-            renderer.setposition(pos)
+    while len(entities) > 0:
 
-import random
+        entity = next(iter(entities))
+        ox = entity[0]
+        oy = entity[1]
+
+        xpos = ox
+        while (xpos-1, oy) in entities:
+            xpos -= 1
+        startx = xpos
+        while (xpos+1, oy) in entities:
+            xpos += 1
+        endx = xpos
+
+        ypos = oy
+        while (ox, ypos-1) in entities:
+            ypos -= 1
+        starty = ypos
+        while (ox, ypos+1) in entities:
+            ypos += 1
+        endy = ypos
+
+        if endx - startx < endy - starty:
+            for i in range(starty, endy+1):
+                entities.remove((ox,i))
+            ox *= scale
+            bezos.penup()
+            bezos.goto(ox,starty*scale)
+            bezos.pendown()
+            bezos.goto(ox,endy*scale)
+        else:
+            for i in range(startx, endx+1):
+                entities.remove((i,oy))
+            oy *= scale
+            bezos.penup()
+            bezos.goto(startx*scale,oy)
+            bezos.pendown()
+            bezos.goto(endx*scale,oy)
+
 
 testArea = ((-1,-1),(-1,0),(0,-1),(-1,1),(1,-1),(0,1),(1,0),(1,1))
 
 cells = set()
-for i in range(512):
-    cells.add((random.randint(-20,20),random.randint(-20,20)))
+rad = 40
+for i in range(2 * rad * rad):
+    randx = random.randint(-rad,rad)
+    randy = random.randint(-rad,rad)
+    if randx**2 + randy**2 > rad**2:
+        continue
+    cells.add((randx,randy))
 newCells = list(cells)
 
 deadCells = []
@@ -37,9 +75,15 @@ positions = {}
 for i in newCells:
     positions[i] = [1,0]
 
+renderPositions = set()
+
 for frame in range(1000):
 
-    render(bezos,positions)
+    renderPositions.clear()
+    for i in positions.keys():
+        if positions[i][0] == 1:
+            renderPositions.add(i)
+    render(bezos,renderPositions)
 
     for newCell in newCells:
         for displacement in testArea:
@@ -64,7 +108,7 @@ for frame in range(1000):
     newCells = []
     deadCells = []
 
-    for position in positions.keys():
+    for position in positions:
         if positions[position][0] == 1:
             if positions[position][1] > 3 or positions[position][1] < 2:
                 positions[position][0] = -1
@@ -72,3 +116,6 @@ for frame in range(1000):
         elif positions[position][1] == 3:
             positions[position][0] = 1
             newCells.append(position)
+
+bezos.penup()
+bezos.goto(0,0)
